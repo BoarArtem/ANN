@@ -3,6 +3,7 @@ from sklearn.model_selection import train_test_split
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
+from tensorflow.keras.callbacks import EarlyStopping
 
 data = pd.read_csv("../data/WineQT.csv")
 data = data.drop(['Id'], axis=1)
@@ -22,9 +23,10 @@ model = Sequential([
 
 opt=tf.keras.optimizers.Adam(learning_rate=0.001)
 loss=tf.keras.losses.SparseCategoricalCrossentropy()
+# early_stopping=EarlyStopping(monitor='val_loss', patience=20)
 
 model.compile(optimizer=opt, loss=loss, metrics=["accuracy"])
-model.fit(X_train, y_train, epochs=100, validation_data=(X_test, y_test))
+model.fit(X_train, y_train, epochs=200, validation_data=(X_test, y_test))
 
 print(model.summary())
 model.save('wine.h5')
