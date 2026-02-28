@@ -27,3 +27,4 @@ model.compile(optimizer=opt, loss=loss, metrics=["accuracy"])
 model.fit(X_train, y_train, epochs=100, validation_data=(X_test, y_test))
 
 print(model.summary())
+model.save('wine.h5')
