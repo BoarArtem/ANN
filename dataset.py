@@ -1,46 +1,38 @@
 import pandas as pd
-from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.model_selection import train_test_split
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch import nn
 
-scaler = StandardScaler()
-encoder = LabelEncoder()
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
 
 data = pd.read_csv("data/bitcoin.csv")
 data = data.drop(['Date'], axis=1)
 
-X = data.drop(['PriceCategory'], axis=1)
+X = data.iloc[:, 0:-1].values
 
-y = data['PriceCategory']
-y = encoder.fit_transform(y)
+y = data.iloc[:, -1]
+y = y.map({"Low": 0, "Medium": 1, "High": 2})
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
 
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
+# X_train, y_train, X_test, y_test = train_test_split(X,y, test_size=0.2, random_state=42)
 
-class BitcoinDataset(Dataset):
-    def __init__(self, features, targets):
-        self.X = torch.tensor(features, dtype=torch.float32)
-        self.y = torch.tensor(targets, dtype=torch.long)
-        self.n_samples = self.X.shape[0]
+class BitcoinDataset(torch.utils.data.Dataset):
+    def __init__(self, X, y):
+        self.X = torch.tensor(X).long()
+        self.y = y
 
     def __getitem__(self, idx):
         return self.X[idx], self.y[idx]
 
     def __len__(self):
-        return self.n_samples
+        return len(self.X)
 
-train_dataset = BitcoinDataset(X_train, y_train)
-test_dataset = BitcoinDataset(X_test, y_test)
+dataset = BitcoinDataset(X, y)
+loader = torch.utils.data.DataLoader(dataset, shuffle=True, batch_size=32)
 
-train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=16)
+for X, y in loader:
+    print(X.shape), print(y.shape)
 
-for X_batch, y_batch in train_loader:
-    print(X_batch.shape)
-    print(y_batch.shape)
     break
-
-# print(X.columns) # 5
