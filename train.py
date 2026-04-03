@@ -1,56 +1,54 @@
 import torch
 from torch import nn
-import torch.nn.functional as F
-from torch.optim import Adam
-from dataset import train_loader, test_loader
 
-# Создаение класса модели
+from dataset import loader
+
+
 class IrisModel(nn.Module):
-    def __init__(self, input_size, hidden_size, num_classes):
+    def __init__(self, input_size, output_size):
         super(IrisModel, self).__init__()
-        self.hl1 = nn.Linear(input_size, hidden_size) # hidden layer 1
-        self.hl2 = nn.Linear(hidden_size, hidden_size) # hidden layer 2
-        self.ol = nn.Linear(hidden_size, num_classes) # output layer
+
+        self.fc1 = nn.Linear(input_size, 32)
+        self.fc2 = nn.Linear(32, 32)
+        self.fc3 = nn.Linear(32, output_size)
+
+        self.relu = nn.ReLU()
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        x = F.relu(self.hl1(x)) # relu for hl1
-        x = F.relu(self.hl2(x)) # relu for hl1
-        x = self.ol(x) # nothing one for o/p layer
+        out = self.relu(self.fc1(x))
+        out = self.relu(self.fc2(out))
+        out = self.sigmoid(self.fc3(out))
 
-        return x
+        return out
 
-# Создание объекта модели
-model = IrisModel(input_size=4, hidden_size=64, num_classes=3)
+model = IrisModel(4, 3)
 
-# optimizer and lasso
-opt=Adam(model.parameters(), lr=0.01)
-criterion=nn.CrossEntropyLoss()
+epochs = 1000
 
-# Тренировка модели
-num_epochs = 100
+criterion = nn.CrossEntropyLoss()
+optim = torch.optim.Adam(model.parameters(), lr=0.01)
 
-for epoch in range(num_epochs):
+for epoch in range(epochs):
     model.train()
-    for X_batch, y_batch in train_loader:
-        opt.zero_grad() # Обнуление градиентов
-        outputs = model(X_batch) # Запуск forward propagation
-        loss = criterion(outputs, y_batch) # Считаем функцию потерь
-        loss.backward()
-        opt.step() # Обновляем веса
 
-    # Проверка accuracy на тестах
-    model.eval()
     correct = 0
     total = 0
 
-    with torch.no_grad():
-        for X_batch, y_batch in test_loader:
-            outputs = model(X_batch)
-            _, predicted = torch.max(outputs, 1)
-            total += y_batch.size(0)
-            correct += (predicted == y_batch).sum().item()
+    for X_batch, y_batch in loader:
+        X_batch = X_batch.float()
+        y_batch = y_batch.long()
 
-    print(f"Epoch: {epoch+1}, Test accuracy: {correct/total:.3f}")
+        outputs = model(X_batch)
+        loss = criterion(outputs, y_batch)
+        optim.zero_grad()
+        loss.backward()
+        optim.step()
 
-    # Сохраняем модель
-    torch.save(model.state_dict(), "inference/isi_models.pth")
+        _, preds = torch.max(outputs, 1)
+        correct += (preds == y_batch).sum().item()
+        total += y_batch.size(0)
+
+    accuracy = correct / total
+
+    print(f"Epoch: {epoch+1}/{epochs}, Loss: {loss.item():.4f}, Accuracy: {accuracy:.4f}")
